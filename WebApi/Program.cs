@@ -22,6 +22,8 @@ namespace WebApi
                 {
                     logging.ClearProviders();
                     logging.AddConsole();
+                    //todo: add serilog
+                    //logging.AddFile("path/to/Logs/myapp-{Date}.txt");
                 })
                 .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); });
     }
