@@ -65,6 +65,15 @@ namespace WebApi
             {
                 app.UseDeveloperExceptionPage();
             }
+            else 
+            {
+                //migrate in production
+                using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
+                {
+                    var context = serviceScope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    context.Database.Migrate();
+                }
+            }
 
             app.UseHttpsRedirection();
             app.UseHealthChecks("/health_check");
