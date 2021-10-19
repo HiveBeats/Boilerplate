@@ -1,6 +1,6 @@
 using System;
 
-namespace WebApi.DTO
+namespace WebApi.Features.Locations.Requests
 {
     public class GetLocationsRequest
     {

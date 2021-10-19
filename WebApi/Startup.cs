@@ -36,6 +36,8 @@ namespace WebApi
                 .UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()))
                 );
 
+            InjectAllFeatures(services);
+
             services.AddHealthChecks();
             services.AddSwaggerGen(c =>
             {
@@ -90,6 +92,20 @@ namespace WebApi
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+        }
+
+        public void InjectAllFeatures(IServiceCollection services)
+        {
+            var featureInjectors = (from domainAssembly in AppDomain.CurrentDomain.GetAssemblies()
+                                    from assemblyType in domainAssembly.GetExportedTypes()
+                                    where assemblyType.IsSubclassOf(typeof(InjectorBase))
+                                    select assemblyType).ToArray();
+            
+            foreach (var i in featureInjectors)
+            {
+                var instance = Activator.CreateInstance(i);
+                (instance as InjectorBase)?.Inject(services);
+            }
         }
     }
 }
