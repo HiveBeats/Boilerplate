@@ -14,6 +14,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Pomelo.EntityFrameworkCore.MySql;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using WebApi.Configuration;
+using Microsoft.AspNetCore.Identity;
+using WebApi.Middlewares;
 
 namespace WebApi
 {
@@ -36,9 +42,21 @@ namespace WebApi
                 .UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()))
                 );
 
+            services.AddIdentity<AppUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
+                .AddEntityFrameworkStores<AppDbContext>();
+
+            
+            var jwtConfigSection = Configuration.GetSection("jwtTokenConfig");
+            var jwtConfig = jwtConfigSection.Get<JwtTokenConfig>();
+            services.Configure<JwtTokenConfig>(jwtConfigSection);
+            services.AddJwt(jwtConfig);
+
+            services.AddHttpContextAccessor();
+
             InjectAllFeatures(services);
 
             services.AddHealthChecks();
+            
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo()
@@ -63,6 +81,8 @@ namespace WebApi
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseMiddleware(typeof(ErrorHandlingMiddleware));
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -86,9 +106,40 @@ namespace WebApi
             });
             
             app.UseRouting();
-            
-            app.UseCors("AllowAll");
+            /* 
+            Serving Frontend Feature
 
+            app.UseDefaultFiles();
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                HttpsCompression = HttpsCompressionMode.Compress,
+                OnPrepareResponse = (ctx) =>
+                {
+                    if (!env.IsDevelopment())
+                    {
+                        if (ctx.File.Name == "index.html")
+                        {
+                            ctx.Context.Response.Headers.Add("Cache-Control", "no-cache, no-store");
+                            ctx.Context.Response.Headers.Add("Expires", "-1");
+                        }
+                        else
+                        {
+                            ctx.Context.Response.Headers.Add("Cache-Control", "max-age=31536000");
+                            ctx.Context.Response.Headers.Add("Expires", "31536000");
+                        }
+                    }
+                }
+            });
+            */
+            /*
+            
+            // Отключаем проверку SSL сертификатов
+            ServicePointManager.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
+            
+            */
+            app.UseCors("AllowAll");
+            
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
@@ -106,6 +157,36 @@ namespace WebApi
                 var instance = Activator.CreateInstance(i);
                 (instance as InjectorBase)?.Inject(services);
             }
+        }
+    }
+
+    public static class ServiceCollectionExtensions
+    {
+        public static void AddJwt(this IServiceCollection services, JwtTokenConfig jwtConfig)
+        {
+            services.AddSingleton(jwtConfig);
+            services.AddAuthentication(x =>
+            {
+                x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(x =>
+            {
+                //Разрешим авторизацию без https
+                //x.RequireHttpsMetadata = false;
+                x.RequireHttpsMetadata = true;
+                x.SaveToken = true;
+                x.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtConfig.Issuer,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtConfig.Secret)),
+                    ValidAudience = jwtConfig.Audience,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.FromMinutes(1)
+                };
+            });
         }
     }
 }
