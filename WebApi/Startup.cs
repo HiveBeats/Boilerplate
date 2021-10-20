@@ -1,3 +1,4 @@
+//#define MIGRATE
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,7 +46,8 @@ namespace WebApi
             services.AddIdentity<AppUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<AppDbContext>();
 
-            
+            #if !MIGRATE
+
             var jwtConfigSection = Configuration.GetSection("jwtTokenConfig");
             var jwtConfig = jwtConfigSection.Get<JwtTokenConfig>();
             services.Configure<JwtTokenConfig>(jwtConfigSection);
@@ -54,6 +56,8 @@ namespace WebApi
             services.AddHttpContextAccessor();
 
             InjectAllFeatures(services);
+            
+            #endif
 
             services.AddHealthChecks();
             
@@ -68,6 +72,27 @@ namespace WebApi
                         Name = "E1Lama",
                         Url = new Uri("https://e1lama.ru")
                     }
+                });
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme 
+                {
+                    In = ParameterLocation.Header, 
+                    Description = "Please insert JWT with Bearer into field",
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.ApiKey 
+                });
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement 
+                {
+                    { 
+                        new OpenApiSecurityScheme 
+                        { 
+                            Reference = new OpenApiReference 
+                            { 
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer" 
+                            } 
+                        },
+                        new string[] { } 
+                    } 
                 });
             });
             

@@ -54,7 +54,7 @@ namespace WebApi.Controllers
 
         [HttpGet("user")]
         [Authorize]
-        public ActionResult GetCurrentUser()
+        public ActionResult<LoginResponse> GetCurrentUser()
         {
             return Ok(new LoginResponse
             {
@@ -74,7 +74,7 @@ namespace WebApi.Controllers
 
         [HttpPost("refresh-token")]
         [Authorize]
-        public async Task<ActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+        public async Task<ActionResult<LoginResponse>> RefreshToken([FromBody] RefreshTokenRequest request)
         {
             LoginResponse result = null;
             try
