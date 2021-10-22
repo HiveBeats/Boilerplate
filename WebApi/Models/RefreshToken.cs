@@ -17,7 +17,7 @@ namespace WebApi.Models
         {
             AppUserId = userId;
             TokenString = GenerateRefreshTokenString();
-            ExpireAt = currentTime ?? DateTime.Now.AddMinutes(tokenExpirationInMinutes ?? 10);
+            ExpireAt = CalculateExpireDate(currentTime).AddMinutes(tokenExpirationInMinutes ?? 10);
         }
 
         public string AppUserId { get; private set; }
@@ -43,6 +43,11 @@ namespace WebApi.Models
                 rng.GetBytes(randomNumber);
             }
             return Convert.ToBase64String(randomNumber);
-        }       
+        }
+
+        private DateTime CalculateExpireDate(DateTime? currentTime = null)
+        {
+            return currentTime ?? DateTime.UtcNow;
+        }
     }
 }

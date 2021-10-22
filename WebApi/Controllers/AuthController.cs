@@ -73,9 +73,11 @@ namespace WebApi.Controllers
         }
 
         [HttpPost("refresh-token")]
-        [Authorize]
         public async Task<ActionResult<LoginResponse>> RefreshToken([FromBody] RefreshTokenRequest request)
         {
+            if (!ModelState.IsValid || request == null)
+                return BadRequest("Incorrect refresh-token request");
+
             LoginResponse result = null;
             try
             {

@@ -123,12 +123,17 @@ namespace WebApi.Features.Users.Services
 
         public async Task<LoginResponse> RefreshToken(RefreshTokenRequest request)
         {
-            var userName = _contextAccessor.HttpContext.User.Identity.Name;
+            var userName = _contextAccessor.HttpContext.User.Identity.Name ?? request.UserName;
+            if (string.IsNullOrEmpty(userName))
+            {
+                throw new UnauthorizedAccessException("UserName not provided for refresh-token");
+            }
+
             var identityUser = await _userManager.FindByNameAsync(userName);
             if (string.IsNullOrWhiteSpace(request.RefreshToken) || identityUser == null)
                 throw new UnauthorizedAccessException();
 
-            var accessToken = _contextAccessor.HttpContext.Request.Headers["Authorization"];
+            var accessToken = _contextAccessor.HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", string.Empty);
             var jwtResult = await _tokenService.Refresh(request.RefreshToken, accessToken, DateTime.UtcNow, identityUser.Id);
 
             return new LoginResponse

@@ -18,7 +18,7 @@ namespace WebApi.Features.Users.Services
         Task<JwtAuthResult> GenerateTokens(string userId, Claim[] claims, DateTime now);
         Task<JwtAuthResult> Refresh(string refreshToken, string accessToken, DateTime now, string userId);
         Task RemoveRefreshTokenByUserId(string userId);
-        (ClaimsPrincipal, JwtSecurityToken) DecodeJwtToken(string token);
+        (ClaimsPrincipal, JwtSecurityToken) DecodeJwtToken(string token, bool validateLifetime = true);
     }
 
     public class RefreshTokenService: IRefreshTokenService
@@ -68,15 +68,15 @@ namespace WebApi.Features.Users.Services
 
         public async Task<JwtAuthResult> Refresh(string refreshToken, string accessToken, DateTime now, string userId)
         {
-            var (principal, jwtToken) = DecodeJwtToken(accessToken);
+            var (principal, jwtToken) = DecodeJwtToken(accessToken, false);
             if (jwtToken == null || !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256Signature))
             {
                 throw new SecurityTokenException("Invalid token");
             }
 
             var userName = principal.Identity.Name;
-            var existingRefreshToken = await _db.RefreshTokens.FindAsync(RefreshToken.Create(userId, refreshToken));
-            var user = await _db.Users.FindAsync(new AppUser(){ Id = userId });
+            var existingRefreshToken = await _db.RefreshTokens.FindAsync(userId, refreshToken);
+            var user = await _db.Users.FindAsync(userId);
             if (existingRefreshToken == null)
             {
                 throw new SecurityTokenException("Invalid token");
@@ -89,7 +89,7 @@ namespace WebApi.Features.Users.Services
             return await GenerateTokens(userId, principal.Claims.ToArray(), now); // need to recover the original claims
         }
 
-        public (ClaimsPrincipal, JwtSecurityToken) DecodeJwtToken(string token)
+        public (ClaimsPrincipal, JwtSecurityToken) DecodeJwtToken(string token, bool validateLifetime = true)
         {
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -105,7 +105,7 @@ namespace WebApi.Features.Users.Services
                         IssuerSigningKey = new SymmetricSecurityKey(_secret),
                         ValidAudience = _jwtTokenConfig.Audience,
                         ValidateAudience = true,
-                        ValidateLifetime = true,
+                        ValidateLifetime = validateLifetime,
                         ClockSkew = TimeSpan.FromMinutes(1)
                     },
                     out var validatedToken);
