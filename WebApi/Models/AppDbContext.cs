@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace WebApi.Models
 {
-    public class AppDbContext: DbContext
+    public class AppDbContext: IdentityDbContext<AppUser>
     {
         public AppDbContext()
         {
@@ -14,7 +15,16 @@ namespace WebApi.Models
             //Database.EnsureDeleted();
             //Database.EnsureCreated();
         }
-        
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            
+            AppDbContextBuilder.ConfigureModels(modelBuilder);
+            AppDbContextBuilder.ConfigureIdentityModels(modelBuilder);
+        }
+
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<Location> Locations { get; set; }
     }
 }

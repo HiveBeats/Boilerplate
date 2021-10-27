@@ -1,6 +1,6 @@
 using System;
 
-namespace WebApi.DTO
+namespace WebApi.Features.Locations.Responses
 {
     public class LocationDto
     {

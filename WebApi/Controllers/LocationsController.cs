@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using WebApi.DTO;
+using WebApi.Features.Locations.Requests;
+using WebApi.Features.Locations.Responses;
 using WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +36,7 @@ namespace WebApi.Controllers
                 await _db.Locations.AddRangeAsync(items);
                 await _db.SaveChangesAsync();
             }
-            catch (Exception e)
+            catch
             {
                 return BadRequest("Incorrect input");
             }
@@ -62,7 +63,7 @@ namespace WebApi.Controllers
                         Timestamp = d.Timestamp
                     });
             }
-            catch (Exception e)
+            catch
             {
                 return BadRequest("fail");
             }
